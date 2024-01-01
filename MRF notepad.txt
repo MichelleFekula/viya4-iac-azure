@@ -1,0 +1,90 @@
+MRF notepad
+
+
+9:45 - 15:00  Complete Steps 1 to 5 for SAS Installation
+8:00 - 1:30, 3:00 - 9:00 Complete Steps 6 to 20 for SAS Installation
+12:15 - 
+
+
+
+sudo cp terraform.tfstate "/mnt/c/Users/MichelleFekula/OneDrive - Default Directory/SSH Keys/terraform.tfstate"
+
+az login # follow the instructions given by this command
+
+TF_VAR_client_secret=$(az ad sp create-for-rbac \
+    --role "Contributor" \
+    --scopes="/subscriptions/2b335681-4f67-4530-a9b5-9ba23e346229" \
+    --name sas-viya-4-SP-ID --query password --output tsv)
+
+TF_VAR_client_id=$(az ad sp list --display-name sas-viya-4-SP-ID --query [].appId --output tsv)
+TF_VAR_tenant_id=$(az ad sp list --display-name sas-viya-4-SP-ID --query [].appOwnerOrganizationId --output tsv)
+
+echo TF_VAR_tenant_id=$TF_VAR_tenant_id /n  > .azure_docker_creds.env
+echo TF_VAR_subscription_id=2b335681-4f67-4530-a9b5-9ba23e346229 >> .azure_docker_creds.env
+echo TF_VAR_client_id=$TF_VAR_client_id >> .azure_docker_creds.env
+echo TF_VAR_client_secret=$TF_VAR_client_secret >> .azure_docker_creds.env
+
+
+sudo cp ~/.azure_docker_creds.env "/mnt/c/Users/MichelleFekula/OneDrive - Default Directory/SSH Keys/.azure_docker_creds.env" 
+
+sudo cp "/mnt/c/Users/MichelleFekula/OneDrive - Default Directory/SSH Keys/sas-viya-4_ssh_key_public.pub" "~/.ssh/sas-viya-4_ssh_key_public.pub"
+
+cd ~/viya4-iac-azure
+rm variables.tf 
+cp "/mnt/c/Users/MichelleFekula/viya4-iac-azure/variables.tf" .
+
+rm terraform.tfvars 
+cp "/mnt/c/Users/MichelleFekula/viya4-iac-azure/terraform.tfvars" .
+
+docker build -t viya4-iac-azure .
+
+docker run --rm --group-add root \
+  --user "$(id -u):$(id -g)" \
+  --env-file=$HOME/.azure_docker_creds.env \
+  --volume=$HOME/.ssh:/.ssh \
+  --volume=$(pwd):/workspace \
+  viya4-iac-azure \
+  plan -var-file=/workspace/terraform.tfvars \
+       -state=/workspace/terraform.tfstate  \
+       -out=/workspace/terraform.tfplan
+
+docker run --rm --group-add root \
+  --user "$(id -u):$(id -g)" \
+  --env-file=$HOME/.azure_docker_creds.env \
+  --volume=$HOME/.ssh:/.ssh \
+  --volume=$(pwd):/workspace \
+  viya4-iac-azure \
+  apply -auto-approve \
+        -var-file=/workspace/terraform.tfvars \
+        -state=/workspace/terraform.tfstate 
+
+docker run --rm --group-add root \
+  --user "$(id -u):$(id -g)" \
+  --volume=$(pwd):/workspace \
+  viya4-iac-azure \
+  output -state=/workspace/terraform.tfstate  
+
+cp terraform.tfstate "/mnt/c/Users/MichelleFekula/OneDrive - Default Directory/SSH Keys/viya4-iac-azure-terraform.tfstate"
+cp sas-viya-4-aks-kubeconfig.conf "/mnt/c/Users/MichelleFekula/OneDrive - Default Directory/SSH Keys/sas-viya-4-aks-kubeconfig.conf"
+cp terraform.tfvars "/mnt/c/Users/MichelleFekula/OneDrive - Default Directory/SSH Keys/viya4-iac-azure-terraform.tfvars"
+cp variables.tf "/mnt/c/Users/MichelleFekula/OneDrive - Default Directory/SSH Keys/viya4-iac-azure-variables.tf"
+
+
+
+Login into vm
+
+sudo apt-get update # cupdate packages
+
+git --version # verify git installed
+
+docker --version
+
+sudo docker run Hello-World
+
+sudo apt install azure-cli
+
+
+
+
+
+sudo cp "/mnt/c/Users/MichelleFekula/viya4-deployment/ansible-vars.yaml" .
